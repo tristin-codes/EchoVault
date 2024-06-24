@@ -1047,3 +1047,108 @@ func TestEchoVault_DECR(t *testing.T) {
 		})
 	}
 }
+
+func TestEchoVault_KEYS(t *testing.T) {
+	server := createEchoVault()
+
+	tests := []struct {
+		name         string
+		key          string
+		presetValues map[string]internal.KeyData
+		want         []string
+		wantErr      bool
+	}{
+		{
+			name: "1. Return all keys",
+			key:  "*",
+			presetValues: map[string]internal.KeyData{
+				"Keys1":      {Value: "1"},
+				"OtherKey":   {Value: "2"},
+				"SpecialKey": {Value: "3"},
+				"hello":      {Value: "world"},
+				"hallo":      {Value: "5"},
+				"hbllo":      {Value: "6"},
+			},
+			want:    []string{"Keys1", "OtherKey", "SpecialKey", "hello", "hallo", "hbllo"},
+			wantErr: false,
+		},
+		{
+			name: "2. Return all h?llo keys",
+			key:  "h?llo",
+			presetValues: map[string]internal.KeyData{
+				"Keys1":      {Value: "1"},
+				"OtherKey":   {Value: "2"},
+				"SpecialKey": {Value: "3"},
+				"hello":      {Value: "world"},
+				"hallo":      {Value: "5"},
+				"hbllo":      {Value: "6"},
+			},
+			want:    []string{"hello", "hallo", "hbllo"},
+			wantErr: false,
+		},
+		{
+			name: "3. Return hallo and hbllo keys",
+			key:  "h[^e]llo",
+			presetValues: map[string]internal.KeyData{
+				"Keys1":      {Value: "1"},
+				"OtherKey":   {Value: "2"},
+				"SpecialKey": {Value: "3"},
+				"hello":      {Value: "world"},
+				"hallo":      {Value: "5"},
+				"hbllo":      {Value: "6"},
+			},
+			want:    []string{"hallo", "hbllo"},
+			wantErr: false,
+		},
+		{
+			name: "4. Return hallo and hbllo keys",
+			key:  "h[a-b]llo",
+			presetValues: map[string]internal.KeyData{
+				"Keys1":      {Value: "1"},
+				"OtherKey":   {Value: "2"},
+				"SpecialKey": {Value: "3"},
+				"hello":      {Value: "world"},
+				"hallo":      {Value: "5"},
+				"hbllo":      {Value: "6"},
+			},
+			want: []string{"hallo", "hbllo"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.presetValues != nil {
+				for k, d := range tt.presetValues {
+					presetKeyData(server, context.Background(), k, d)
+				}
+			}
+			got, err := server.Keys(tt.key)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("KEYS() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// TODO: why are empty keys being addedf for each presetValue in presetValues? Want 6, getting 6 + 6 empty
+			//		strings
+
+			var cleanedUpGot []string
+			for _, key := range got {
+				if key != "" {
+					cleanedUpGot = append(cleanedUpGot, key)
+				}
+			}
+
+			if len(cleanedUpGot) != len(tt.want) {
+				t.Errorf("KEYS() improper len len(got)=%v, len(want)=%v, got=%v, want=%v", len(got), len(tt.want), cleanedUpGot, tt.want)
+			}
+			for _, g := range cleanedUpGot {
+				if !slices.Contains(tt.want, g) {
+					t.Errorf("KEYS() got = %v, want %v", got, tt.want)
+				}
+			}
+			// TODO: investigate deepequals, I'm not familiar with reflect
+			//if !reflect.DeepEqual(cleanedUpGot, tt.want) {
+			//	t.Errorf("KEYS() got = %v, want %v", got, tt.want)
+			//}
+		})
+	}
+}

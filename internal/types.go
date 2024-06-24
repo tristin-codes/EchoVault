@@ -64,54 +64,56 @@ type KeyExtractionFunc func(cmd []string) (KeyExtractionFuncResult, error)
 // These params are provided to commands by the EchoVault engine to help the command hook into functions from the
 // echovault package.
 type HandlerFuncParams struct {
-	// Context is the context passed from the EchoVault instance.
-	Context context.Context
 	// Command is the string slice contains the command (e.g []string{"SET", "key", "value"})
 	Command []string
 	// Connection is the connection that triggered this command.
 	// Do not write the response directly to the connection, return it from the function.
 	Connection *net.Conn
-	// KeysExist returns a map that specifies which keys exist in the keyspace.
-	KeysExist func(keys []string) map[string]bool
-	// GetExpiry returns the expiry time of a key.
-	GetExpiry func(key string) time.Time
+	// Context is the context passed from the EchoVault instance.
+	Context context.Context
 	// DeleteKey deletes the specified key. Returns an error if the deletion was unsuccessful.
 	DeleteKey func(key string) error
-	// GetValues retrieves the values from the specified keys.
-	// Non-existent keys will be nil.
-	GetValues func(ctx context.Context, keys []string) map[string]interface{}
-	// SetValues sets each of the keys with their corresponding values in the provided map.
-	SetValues func(ctx context.Context, entries map[string]interface{}) error
-	// Set expiry sets the expiry time of the key.
-	SetExpiry func(ctx context.Context, key string, expire time.Time, touch bool)
-	// GetClock gets the clock used by the server.
-	// Use this when making use of time methods like .Now and .After.
-	// This inversion of control is a helper for testing as the clock is automatically mocked in tests.
-	GetClock func() clock.Clock
-	// GetAllCommands returns all the commands loaded in the EchoVault instance.
-	GetAllCommands func() []Command
 	// GetACL returns the EchoVault instance's ACL engine.
 	// There's no need to use this outside of the acl package,
 	// ACL authorizations for all commands will be handled automatically by the EchoVault instance as long as the
 	// commands KeyExtractionFunc returns the correct keys.
 	GetACL func() interface{}
+	// GetAllCommands returns all the commands loaded in the EchoVault instance.
+	GetAllCommands func() []Command
+	// GetClock gets the clock used by the server.
+	// Use this when making use of time methods like .Now and .After.
+	// This inversion of control is a helper for testing as the clock is automatically mocked in tests.
+	GetClock func() clock.Clock
+	// GetExpiry returns the expiry time of a key.
+	GetExpiry func(key string) time.Time
+	// GetKeys returns all keys in the server store
+	GetKeys func() []string
+	// GetLatestSnapshotTime returns the latest snapshot timestamp
+	GetLatestSnapshotTime func() int64
 	// GetPubSub returns the EchoVault instance's PubSub engine.
 	// There's no need to use this outside of the pubsub package.
 	GetPubSub func() interface{}
-	// TakeSnapshot triggers a snapshot by the EchoVault instance.
-	TakeSnapshot func() error
-	// RewriteAOF triggers a compaction of the commands logs by the EchoVault instance.
-	RewriteAOF func() error
-	// GetLatestSnapshotTime returns the latest snapshot timestamp
-	GetLatestSnapshotTime func() int64
+	// GetValues retrieves the values from the specified keys.
+	// Non-existent keys will be nil.
+	GetValues func(ctx context.Context, keys []string) map[string]interface{}
+	// KeysExist returns a map that specifies which keys exist in the keyspace.
+	KeysExist func(keys []string) map[string]bool
+	// ListModules returns the list of modules loaded in the EchoVault instance.
+	ListModules func() []string
 	// LoadModule loads the provided module with the given args passed to the module's
 	// key extraction and handler functions.
 	LoadModule func(path string, args ...string) error
+	// RewriteAOF triggers a compaction of the commands logs by the EchoVault instance.
+	RewriteAOF func() error
+	// SetValues sets each of the keys with their corresponding values in the provided map.
+	SetValues func(ctx context.Context, entries map[string]interface{}) error
+	// Set expiry sets the expiry time of the key.
+	SetExpiry func(ctx context.Context, key string, expire time.Time, touch bool)
+	// TakeSnapshot triggers a snapshot by the EchoVault instance.
+	TakeSnapshot func() error
 	// UnloadModule removes the specified module.
 	// This unloads both custom modules and internal modules.
 	UnloadModule func(module string)
-	// ListModules returns the list of modules loaded in the EchoVault instance.
-	ListModules func() []string
 }
 
 // HandlerFunc is a functions described by a command where the bulk of the command handling is done.

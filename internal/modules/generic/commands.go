@@ -15,9 +15,11 @@
 package generic
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -477,6 +479,45 @@ func handleDecr(params internal.HandlerFuncParams) ([]byte, error) {
 	return []byte(fmt.Sprintf(":%d\r\n", newValue)), nil
 }
 
+func handleKeys(params internal.HandlerFuncParams) ([]byte, error) {
+	keys, err := keysKeyFunc(params.Command)
+	if err != nil {
+		return nil, err
+	}
+
+	key := keys.ReadKeys[0]
+	storeKeys := params.GetKeys()
+
+	var buffer bytes.Buffer
+
+	if key == "*" {
+		buffer.WriteString(fmt.Sprintf("*%d\r\n", len(storeKeys)))
+		for _, storeKey := range storeKeys {
+			buffer.WriteString(fmt.Sprintf("$%d\r\n%s\r\n", len(storeKey), storeKey))
+		}
+		return buffer.Bytes(), nil
+	}
+
+	var numOfMatchedKeys int64
+	for _, storeKey := range storeKeys {
+		if matched, err := filepath.Match(key, storeKey); err != nil {
+			return nil, err
+		} else if matched {
+			buffer.WriteString(fmt.Sprintf("$%d\r\n%s\r\n", len(storeKey), storeKey))
+			numOfMatchedKeys += 1
+		}
+	}
+
+	// Create the header to be combined with the matched keys buffer
+	header := fmt.Sprintf("*%d\r\n", numOfMatchedKeys)
+
+	var resBuffer bytes.Buffer
+	resBuffer.WriteString(header)
+	resBuffer.Write(buffer.Bytes())
+
+	return resBuffer.Bytes(), nil
+}
+
 func Commands() []internal.Command {
 	return []internal.Command{
 		{
@@ -669,6 +710,15 @@ This operation is limited to 64 bit signed integers.`,
 			Sync:              true,
 			KeyExtractionFunc: decrKeyFunc,
 			HandlerFunc:       handleDecr,
+		},
+		{
+			Command:           "keys",
+			Module:            constants.GenericModule,
+			Categories:        []string{constants.KeyspaceCategory, constants.ReadCategory, constants.SlowCategory, constants.DangerousCategory},
+			Description:       "(KEYS pattern) Returns an array of keys that match the provided glob pattern.",
+			Sync:              false,
+			KeyExtractionFunc: keysKeyFunc,
+			HandlerFunc:       handleKeys,
 		},
 	}
 }

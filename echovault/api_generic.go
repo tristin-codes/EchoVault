@@ -461,3 +461,23 @@ func (server *EchoVault) Decr(key string) (int, error) {
 	// Parse the integer response
 	return internal.ParseIntegerResponse(b)
 }
+
+// Keys returns all of the keys matching the glob pattern of the given key.
+// Parameters:
+//
+// `key` - string - pattern of key to match on
+//
+// Returns: A string slice of all the matching keys.
+func (server *EchoVault) Keys(key string) ([]string, error) {
+	// Construct the command
+	cmd := []string{"KEYS", key}
+
+	// Execute the command
+	b, err := server.handleCommand(server.context, internal.EncodeCommand(cmd), nil, false, true)
+	if err != nil {
+		return []string{}, err
+	}
+
+	// Parse the string slice response
+	return internal.ParseStringArrayResponse(b)
+}

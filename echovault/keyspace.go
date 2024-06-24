@@ -29,6 +29,18 @@ import (
 	"time"
 )
 
+func (server *EchoVault) getKeys() []string {
+	server.storeLock.Lock()
+	defer server.storeLock.Unlock()
+
+	keys := make([]string, len(server.store))
+	for key, _ := range server.store {
+		keys = append(keys, key)
+	}
+
+	return keys
+}
+
 func (server *EchoVault) keysExist(keys []string) map[string]bool {
 	server.storeLock.RLock()
 	defer server.storeLock.RUnlock()
